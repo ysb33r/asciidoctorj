@@ -8,15 +8,12 @@ dependencies {
   }
 }
 
-def gemFiles = fileTree(jruby.gemInstallDir) {
-  include 'specifications/*'
-  include 'gems/*/lib/**'
-  include 'gems/*/data/**'
-}
+gemsToResources {
 
-jrubyPrepare << {
-  copy { // bundles the gems inside this artifact
-    from gemFiles
-    into sourceSets.main.output.resourcesDir
+  from fileTree(jruby.gemInstallDir) {
+    include 'specifications/*'
+    include 'gems/*/lib/**'
+    include 'gems/*/data/**'
   }
 }
+

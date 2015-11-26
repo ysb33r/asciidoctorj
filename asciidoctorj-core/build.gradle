@@ -20,16 +20,11 @@ dependencies {
   testCompile project(path: ':asciidoctorj-arquillian-extension')
 }
 
-def gemFiles = fileTree(jruby.gemInstallDir) {
-  include 'specifications/*.gemspec'
-  include 'gems/*/lib/**'
-  include "gems/asciidoctor-${asciidoctorGemVersion}/data/**"
-}
-
-jrubyPrepare << {
-  copy { // bundles the gems inside this artifact
-    from gemFiles
-    into sourceSets.main.output.resourcesDir
+gemsToResources {
+  from fileTree(jruby.gemInstallDir) {
+    include 'specifications/*.gemspec'
+    include 'gems/*/lib/**'
+    include "gems/asciidoctor-${asciidoctorGemVersion}/data/**"
   }
 }
 

@@ -1,22 +1,20 @@
-// legacy plugins config; necessary to accomodate Java 6
-buildscript {
-  repositories {
-    jcenter()
-  }
-  dependencies {
-    if (JavaVersion.current().isJava7Compatible()) {
-      classpath 'com.netflix.nebula:nebula-publishing-plugin:2.2.2'
-    }
-    classpath 'org.jfrog.buildinfo:build-info-extractor-gradle:3.1.1'
-  }
-}
+//// legacy plugins config; necessary to accomodate Java 6
+//buildscript {
+//  repositories {
+//    jcenter()
+//  }
+//  dependencies {
+//      classpath 'com.netflix.nebula:nebula-publishing-plugin:2.0.0'
+//  }
+//}
 
 // modern plugins config
 plugins {
-  id 'com.github.jruby-gradle.base' version '1.1.4'
+  id 'com.github.jruby-gradle.base' version '1.1.5'
   // Adding the nebula-publishing plugin when using JDK6 causes the build to abort
-  //id 'nebula.nebula-publishing' version '2.0.0'
-  id 'com.jfrog.bintray' version '1.0'
+  id 'nebula.nebula-publishing' version '2.2.2'
+  id 'com.jfrog.bintray' version '1.5'
+  id 'com.jfrog.artifactory' version '3.1.2'
 }
 
 // TIP use -PpublishRelease=true to active release behavior regardless of the version
@@ -29,37 +27,37 @@ ext {
   statusIsRelease = (status == 'release')
 
   // jar versions
-  arquillianVersion = '1.1.8.Final'
-  arquillianSpockVersion = '1.0.0.Beta3'
-  commonsioVersion = '2.4'
-  guavaVersion = '18.0'
-  hamcrestVersion = '1.3'
-  jcommanderVersion = '1.35'
-  jrubyVersion = '9.0.3.0'
-  jsoupVersion = '1.8.1'
-  junitVersion = '4.12'
-  nettyVersion = '4.0.28.Final'
-  saxonVersion = '9.5.1-6'
-  xmlMatchersVersion = '1.0-RC1'
-  pdfboxVersion = '1.8.10'
+  arquillianVersion       = '1.1.8.Final'
+  arquillianSpockVersion  = '1.0.0.Beta3'
+  coderayGemVersion       = '1.1.0'
+  commonsioVersion        = '2.4'
+  erubisGemVersion        = '2.7.0'
+  groovyVersion           = '2.4.3'
+  guavaVersion            = '18.0'
+  hamcrestVersion         = '1.3'
+  hamlGemVersion          = '4.0.5'
+  jcommanderVersion       = '1.35'
+  jrubyVersion            =  '9.0.4.0' // 1.7.21
+  jsoupVersion            = '1.8.3'
+  junitVersion            = '4.12'
+  nettyVersion            = '4.0.28.Final'
+  openUriCachedGemVersion = '0.0.5'
+  pdfboxVersion           = '1.8.10'
+  prawnGemVersion         = '1.3.0'
+  rougeGemVersion         = '1.10.1'
+  saxonVersion            = '9.5.1-6'
+  slimGemVersion          = '3.0.6'
+  spockVersion            = '1.0-groovy-2.4'
+  threadSafeGemVersion    = '0.3.5'
+  tiltGemVersion          = '2.0.1'
+  ttfunkGemVersion        = '1.2.2'
+  xmlMatchersVersion      = '1.0-RC1'
 
   // gem versions
   asciidoctorGemVersion = project.hasProperty('asciidoctorGemVersion') ? project.asciidoctorGemVersion : '1.5.3'
   asciidoctorEpub3GemVersion = project(':asciidoctorj-epub3').version.replace('-', '.')
   asciidoctorPdfGemVersion = project.hasProperty('asciidoctorPdfGemVersion') ? project.asciidoctorPdfGemVersion : project(':asciidoctorj-pdf').version.replace('-', '.')
   asciidoctorDiagramGemVersion = project(':asciidoctorj-diagram').version.replace('-', '.')
-  coderayGemVersion = '1.1.0'
-  groovyVersion = '2.1.8'
-  erubisGemVersion = '2.7.0'
-  hamlGemVersion = '4.0.5'
-  openUriCachedGemVersion = '0.0.5'
-  prawnGemVersion = '1.3.0'
-  rougeGemVersion = '1.9.1'
-  slimGemVersion = '3.0.3'
-  spockVersion = '0.7-groovy-2.0'
-  threadSafeGemVersion = '0.3.4'
-  tiltGemVersion = '2.0.1'
-  ttfunkGemVersion = '1.2.2'
 }
 
 allprojects {
@@ -68,6 +66,7 @@ allprojects {
 }
 
 subprojects {
+
   // NOTE applying Java plugin changes the status; take steps to preserve value
   def _status = status
   apply plugin: 'java'
@@ -84,7 +83,7 @@ subprojects {
       mavenLocal()
     }
     // QUESTION can we switch to jcenter() only?
-    mavenCentral()
+    jcenter()
     maven {
       name 'rubygems-release'
       url 'http://rubygems-proxy.torquebox.org/releases'
@@ -97,18 +96,34 @@ subprojects {
 }
 
 // apply Java and JRuby stuff for all subprojects except the distribution
-configure(subprojects.findAll { !it.name.endsWith('-distribution') }) {
+configure( subprojects.findAll { !it.name.endsWith('-distribution') }) {
+
+  plugins.withType(JavaPlugin) {
+
+    project.tasks.withType(JavaCompile) { task ->
+      task.sourceCompatibility = project.sourceCompatibility
+      task.targetCompatibility = project.targetCompatibility
+    }
+
+    project.tasks.withType(GroovyCompile) { task ->
+      task.sourceCompatibility = project.sourceCompatibility
+      task.targetCompatibility = project.targetCompatibility
+    }
+  }
+
   dependencies {
     testCompile "junit:junit:$junitVersion"
     testCompile "org.hamcrest:hamcrest-library:$hamcrestVersion"
     testCompile("org.spockframework:spock-core:$spockVersion") {
       exclude group: 'org.hamcrest', module: 'hamcrest-core'
+      exclude module: 'groovy-all'
     }
     testCompile "org.codehaus.groovy:groovy-all:$groovyVersion"
     testCompile "org.jboss.arquillian.junit:arquillian-junit-container:$arquillianVersion"
     testCompile "org.jboss.arquillian.spock:arquillian-spock-container:$arquillianSpockVersion"
 
   }
+
   apply plugin: 'codenarc'
   codenarc {
     configFile = rootProject.file('config/codenarc/codenarc.groovy')
@@ -120,8 +135,7 @@ configure(subprojects.findAll { !it.name.endsWith('-distribution') }) {
     maxHeapSize = '1024m'
     if (JavaVersion.current().isJava8Compatible()) {
       jvmArgs '-XX:-UseGCOverheadLimit'
-    }
-    else {
+    } else {
       jvmArgs '-XX:MaxPermSize=256m', '-XX:-UseGCOverheadLimit'
     }
 
@@ -169,13 +183,22 @@ configure(subprojects.findAll { !it.name.endsWith('-distribution') }) {
     // TODO I'd like to be able to customize the name of the gemInstallDir
   }
 
-  // QUESTION is this the right place to insert this task dependency in the lifecycle?
-  // IMPORTANT The TMP or TEMP environment variable must be set for the gem install command to work on Windows
-  processResources.dependsOn jrubyPrepare
+  task gemsToResources(type: Copy) {
+    description 'Copy the unpacked GEMs to the resources folder'
+    into sourceSets.main.output.resourcesDir
+  }
 
-  apply from: rootProject.file('gradle/eclipse.gradle')
-  if (JavaVersion.current().isJava7Compatible() && !it.name.endsWith('-documentation')) {
-    apply from: rootProject.file('gradle/publish.gradle')
+  jrubyPrepare {
+    dependsOn gemsToResources
+    apply from: rootProject.file('gradle/eclipse.gradle')
+    if (JavaVersion.current().isJava7Compatible() && !it.name.endsWith('-documentation')) {
+      apply from: rootProject.file('gradle/publish.gradle')
+    }
+
+    // QUESTION is this the right place to insert this task dependency in the lifecycle?
+    processResources {
+      dependsOn jrubyPrepare
+    }
   }
 }
 
